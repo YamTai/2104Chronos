@@ -322,10 +322,6 @@ extern void display_char(u8 segment, u8 chr, u8 mode);
 extern void display_chars(u8 segments, u8 * str, u8 mode);
 extern void display_symbol(u8 symbol, u8 mode);
 
-// Time display function
-extern void DisplayTime(u8 updateMode);
-extern void display_am_pm_symbol(u8 timeAM);
-
 // Set_value display functions
 extern void display_value(u8 segments, u32 value, u8 digits, u8 blanks);
 extern void display_hours(u8 segments, u32 value, u8 digits, u8 blanks);
