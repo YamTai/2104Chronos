@@ -2,12 +2,6 @@
 #ifndef __ACCEL_H
 #define __ACCEL_H
 
-#define BUTTON_STAR_PIN         (BIT2)
-#define BUTTON_NUM_PIN          (BIT1)
-#define BUTTON_UP_PIN           (BIT4)
-#define BUTTON_DOWN_PIN         (BIT0)
-#define BUTTON_BACKLIGHT_PIN    (BIT3)
-
 #define BMP_ACC_X_LSB        	(0x82)
 #define BMP_ACC_X_MSB        	(0x83)
 #define BMP_ACC_Y_LSB        	(0x84)
