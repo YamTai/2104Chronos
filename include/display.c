@@ -37,14 +37,7 @@
 
 // *************************************************************************************************
 // Include section
-
-// system
-#include <project.h>
-#include <string.h>
-
-// driver
 #include "display.h"
-
 
 // *************************************************************************************************
 // Prototypes section
@@ -700,4 +693,3 @@ void set_blink_rate(u8 bits)
     LCDBBLKCTL &= ~(BIT7 | BIT6 | BIT5);
     LCDBBLKCTL |= bits;
 }
-
