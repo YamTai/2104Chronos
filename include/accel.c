@@ -41,6 +41,8 @@ void init_accel(){
 
 	/* write accelerometer register configuration */
 
+	accel_start();
+
 	get_set_reg(BMP_GRANGE & ~BIT8, g_range, 1);	// g Range config
 	get_set_reg(BMP_BWD & ~BIT8, bw, 1);			// Bandwidth config
 	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config (power mode)
@@ -102,8 +104,6 @@ int is_neg(u8 data){
 }
 
 u8 get_set_reg(u8 address, u8 config, int RW){
-
-	accel_start();
 
 	//	if RW = 1, write, else read
 	u8 data;
