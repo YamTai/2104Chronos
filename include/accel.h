@@ -2,7 +2,7 @@
 #ifndef __ACCEL_H
 #define __ACCEL_H
 
-#define BMP_ACC_X_LSB        	(0x82)
+#define BMP_ACC_X_LSB        	(0x82)	//	from BMA250 datasheet pg.35
 #define BMP_ACC_X_MSB        	(0x83)
 #define BMP_ACC_Y_LSB        	(0x84)
 #define BMP_ACC_Y_MSB        	(0x85)
@@ -20,6 +20,10 @@
 #define BMP_IMR2             (0x1A)	   // Interrupt mapping register 2
 #define BMP_IMR3             (0x1B)	   // Interrupt mapping register 3
 
+#define HIGH_G_THRESHOLD	(0x26)	// threshold for high g interrupt (bma250 datasheet, pg. 46)
+
+#define shadowing			(BIT6)	// for BMP_SCR, shadowing (reading LSB updates MSB, set to disable)
+
 #define AS_TX_BUFFER         (UCA0TXBUF)	//	USCI A0 Transmit Buffer
 #define AS_RX_BUFFER         (UCA0RXBUF)	//	USCI A0 Receive Buffer
 #define AS_TX_IFG            (UCTXIFG)		//	USCI A0 Transmit interrupt flag
@@ -32,7 +36,7 @@
 
 // Acceleration measurement range in g
 // Valid ranges are: 2, 4, 8, 16
-#define accel_range       (2u)
+#define accel_range       (8u)
 
 #if (accel_range == 2)
 	static u8 g_range = 0x03;
@@ -89,10 +93,11 @@
 
 #endif
 
-u8 xyz[3];
+u16 xyz[3];
 
 void init_accel(void);
 void accel_get(void);
+void accel_start(void);
 void accel_stop(void);
 u8 get_set_reg(u8, u8, int);
 int is_neg(u8);

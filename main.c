@@ -11,7 +11,9 @@
 #define BUTTON_DOWN_PIN         (BIT0)
 #define BUTTON_BACKLIGHT_PIN    (BIT3)
 
-extern u8 xyz[3];
+#define Accel_int1				(BIT5)
+
+extern u16 xyz[3];
 
 /*
  * main.c
@@ -29,13 +31,13 @@ int main(void) {
     P2IFG &= ~0x1F;	//	P2.0 ~ P2.4 interrupt flag clear
     P2IE |= 0x1F;	//	P2.0 ~ P2.4 interrupt enable
 
-    P2SEL |= 0x08;
+    P2SEL |= 0x08;	//	P2.3 alternate function, TA1 CCR2 CCI2A
 
-    TA0CTL |= TASSEL_1 | ID_2 | TACLR;
-    TA0CCTL0 = CCIE;
+    TA0CTL |= TASSEL_1 | ID_3 | TACLR;	// ACLK (32768Hz) | /8 | timerA clear, 4096Hz (2^16/4096), MAX 16 seconds
+    TA0CCTL0 = CCIE;	//	timerA0 compare/control register 1 interrupt enable
 
-	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (TASSEL_2) | Continuous mode | timer A clear
-	TA1CCTL2 |= CM_1 | CCIS_0 | SCS | CAP | CCIE;	//	rising edge | input select CCI0A | Synchronous | Capture mode | Interrupt enable
+	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (26MHz) | Continuous mode | timer A clear
+	TA1CCTL2 |= CM_1 | CCIS_0 | SCS | CAP | CCIE;	//	rising edge | input select CCI2A | Synchronous | Capture mode | Interrupt enable
 
     init_accel();
 
@@ -54,7 +56,6 @@ __interrupt void Port_2(void){
 
 	if (P2IFG == BUTTON_STAR_PIN){
 		display_chars(LCD_SEG_L1_3_0, "STAR", SEG_ON);
-		TA0CCTL0 &= ~CCIE;
 		accel_get();
 		str = int_to_array(xyz[0], 5, 2);
 		if (is_neg(xyz[0])){
@@ -69,27 +70,27 @@ __interrupt void Port_2(void){
 	}else
 	if (P2IFG == BUTTON_NUM_PIN){
 		display_chars(LCD_SEG_L1_3_0, "MODE", SEG_ON);
-		TA0CCTL0 |= CCIS_0;
+		accel_start();	//	high-g detection on
 	}else
 	if (P2IFG == BUTTON_UP_PIN){
 		display_chars(LCD_SEG_L1_3_0, "  UP", SEG_ON);
-		TA0CCTL0 &= ~CCIE;
-		accel_get();
-		str = int_to_array(xyz[1], 5, 2);
-		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 	}else
 	if (P2IFG == BUTTON_DOWN_PIN){
 		display_chars(LCD_SEG_L1_3_0, "  DN", SEG_ON);
-		TA0CCTL0 &= ~CCIE;
-		accel_get();
-		str = int_to_array(xyz[2], 5, 2);
-		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
+		accel_stop();
 	}else
 	if (P2IFG == BUTTON_BACKLIGHT_PIN){
-		display_chars(LCD_SEG_L1_3_0, "  BL", SEG_ON);
+
+	}else
+	if (P2IFG == Accel_int1){
+		accel_get();
+		str = int_to_array(xyz[1], 5, 2);
+		display_chars(LCD_SEG_L1_3_0, "HI-G", SEG_ON);
+		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 	}
 
 	P2IFG &= ~0x1F;	// P2.0 ~ P2.4 interrupt flag clear
+	P2IFG &= ~0x20;	// accel int1 clear
 
 }
 
@@ -108,18 +109,24 @@ __interrupt void TIMER_A1_CCR2_ISR(void){
 	u8 *str;
 	u16 rand;
 
-    rand = TA1CCR2;
-    rand ^= rand << 8;
+	if ((TA1CCTL2 & CCIFG) == 1){	//	P2.3 interrupt (CCI2A)
+		rand = TA1CCR2;
+		rand ^= rand << 8;
 
-    while (rand < 10000){
-    	++rand << 1;
-    }
+		rand %= 0xA000;	// max of 10 seconds (4096 cycles *10)
 
-	str = int_to_array(rand, 5, 0);
-	display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
+		if (rand < 0x3000){	// min of 3 seconds (4096 *3)
+			rand |= 0x3000;
+		}
 
-	TA1CCTL2 &= ~CCIFG;
+		str = int_to_array(rand, 5, 0);
+		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 
-	TA0CCR0 = rand;
-	TA0CTL |= MC_1;	//	start TimerA0 in up mode
+		TA1CCTL2 &= ~CCIFG;	// clear TA1CCTL2 interrupt
+
+		TA0CCR0 = rand;	//	set TA0CCR0 to 'random' value
+		TA0CTL |= MC_1;	//	start TimerA0 in up mode
+
+	}
+
 }

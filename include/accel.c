@@ -43,36 +43,47 @@ void init_accel(){
 
 	get_set_reg(BMP_GRANGE & ~BIT8, g_range, 1);	// g Range config
 	get_set_reg(BMP_BWD & ~BIT8, bw, 1);			// Bandwidth config
-	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config
+	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config (power mode)
+//	get_set_reg(BMP_SCR & ~BIT8, shadowing, 1);		// disable shadowing
 
-	get_set_reg(BMP_IMR2 & ~BIT8, 0x01, 1);       // map 'new data' interrupt to INT1(P2.5) pin
-	get_set_reg(BMP_ISR2 & ~BIT8, 0x10, 1);       // enable 'new data' interrupt
+
+//	get_set_reg(BMP_IMR2 & ~BIT8, 0x01, 1);       	// map 'new data' interrupt to INT1(P2.5) pin
+//	get_set_reg(BMP_ISR2 & ~BIT8, 0x10, 1);       	// enable 'new data' interrupt
+	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin
+	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
 
 	accel_stop();
 
+	return;
 }
 
 void accel_start(){
 
-//	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
-//	P2IE |= 0x20;	//	enable P2.5 interrupt
+	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
+	P2IE |= 0x20;	//	enable P2.5 interrupt
 
 	PJOUT |= 0x01;	//	power on accelerometer (PJ.0 -> VDD, VDDIO)
 	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
 
 	__delay_cycles(10000);//5ms for accelerometer to initialise (change to timer)
+
+	return;
 }
 
 void accel_stop(){
 
-//	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
-//	P2IE &= ~0x20;	//	disable P2.5 interrupt
+	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
+	P2IE &= ~0x20;	//	disable P2.5 interrupt
 
 	PJOUT &= ~0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
 	PJOUT &= ~0x01;	//	power down accelerometer (PJ.0 -> VDD, VDDIO)
+
+	return;
 }
 
 void accel_get(){
+
+	/* read bma250 datasheet pg. 16 */
 
 	xyz[0] = get_set_reg(BMP_ACC_X_LSB, 0, 0);
 	xyz[0] = get_set_reg(BMP_ACC_X_MSB, 0, 0);
@@ -82,6 +93,8 @@ void accel_get(){
 
 	xyz[2] = get_set_reg(BMP_ACC_Z_LSB, 0, 0);
 	xyz[2] = get_set_reg(BMP_ACC_Z_MSB, 0, 0);
+
+	return;
 }
 
 int is_neg(u8 data){
