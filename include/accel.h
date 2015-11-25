@@ -36,7 +36,7 @@
 
 // Acceleration measurement range in g
 // Valid ranges are: 2, 4, 8, 16
-#define accel_range       (8u)
+#define accel_range       (4u)
 
 #if (accel_range == 2)
 	static u8 g_range = 0x03;

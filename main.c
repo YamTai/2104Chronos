@@ -39,12 +39,10 @@ int main(void) {
     TA0CTL |= TASSEL_1 | ID_3 | TACLR;	// ACLK (32768Hz) | /8 | timerA clear, 4096Hz (2^16/4096), MAX 16 seconds
     TA0CCTL0 = CCIE;	//	timerA0 compare/control register 1 interrupt enable
 
-	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (26MHz) | Continuous mode | timer A clear
+	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (?MHz) | Continuous mode | timer A clear
 	TA1CCTL2 |= CM_1 | CCIS_0 | SCS | CAP | CCIE;	//	rising edge | input select CCI2A | Synchronous | Capture mode | Interrupt enable
 
     init_accel();
-
-
 
     while(1){
 
@@ -75,14 +73,12 @@ __interrupt void Port_2(void){
 	}else
 	if (P2IFG == BUTTON_NUM_PIN){
 		display_chars(LCD_SEG_L1_3_0, "MODE", SEG_ON);
-		accel_start();
 	}else
 	if (P2IFG == BUTTON_UP_PIN){
 		display_chars(LCD_SEG_L1_3_0, "  UP", SEG_ON);
 	}else
 	if (P2IFG == BUTTON_DOWN_PIN){
 		display_chars(LCD_SEG_L1_3_0, "  DN", SEG_ON);
-		accel_stop();
 	}else
 	if (P2IFG == BUTTON_BACKLIGHT_PIN){
 
@@ -102,11 +98,12 @@ __interrupt void Port_2(void){
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TIMER_A0_CCR0_ISR(void){
 
+	accel_stop();
+
 	display_chars(LCD_SEG_L2_4_0, (u8 *)"000000", SEG_ON);
 	TA0CCR0 = 0;
 	TA0CTL |= MC_0 | TACLR;	//	stop TimerA0 in up mode
 	TA0CCTL0 &= ~CCIFG;
-
 }
 
 #pragma vector=TIMER1_A1_VECTOR
@@ -117,7 +114,7 @@ __interrupt void TIMER_A1_CCR2_ISR(void){
 
 	if ((TA1CCTL2 & CCIFG) == 1){	//	P2.3 interrupt (CCI2A)
 
-
+		accel_start();
 
 		rand = TA1CCR2;
 		rand ^= rand << 8;

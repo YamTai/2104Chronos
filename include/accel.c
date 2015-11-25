@@ -51,7 +51,8 @@ void init_accel(){
 
 //	get_set_reg(BMP_IMR2 & ~BIT8, 0x01, 1);       	// map 'new data' interrupt to INT1(P2.5) pin
 //	get_set_reg(BMP_ISR2 & ~BIT8, 0x10, 1);       	// enable 'new data' interrupt
-	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin
+	get_set_reg(HIGH_G_THRESHOLD & ~BIT8, 0xF0, 1);	//	high-g mode threshold, 0xC0 default
+	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
 	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
 
 	accel_stop();
@@ -68,6 +69,9 @@ void accel_start(){
 	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
 
 	__delay_cycles(10000);//5ms for accelerometer to initialise (change to timer)
+
+	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
+	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
 
 	return;
 }
