@@ -88,7 +88,8 @@ __interrupt void Port_2(void){
 		TA0CCTL0 &= ~CCIE;	//	timerA0 compare/control register 0 interrupt disable
 		TA0CCTL1 &= ~CCIE;	//	timerA0 compare/control register 1 interrupt disable
 
-		TA0CTL |= MC_0 | TACLR;	//	stop and clear TimerA0
+		TA0CTL |= TACLR;	//	clear TimerA0
+		TA0CTL &= ~0x30;	//	stop TimerA0
 	}
 
 	P2IFG &= ~0x1F;	// P2.0 ~ P2.4 interrupt flag clear
@@ -108,7 +109,8 @@ __interrupt void TIMER_A5_CCR0_ISR(void){
     TA0CCTL0 &= ~CCIE;	//	timerA0 compare/control register 0 interrupt disable
     TA0CCTL1 &= ~CCIE;	//	timerA0 compare/control register 1 interrupt disable
 
-	TA0CTL |= MC_0 | TACLR;	//	stop and clear TimerA0
+	TA0CTL |= TACLR;	//	clear TimerA0
+	TA0CTL &= ~0x30;	//	stop TimerA0
 }
 
 
