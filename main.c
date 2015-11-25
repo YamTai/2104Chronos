@@ -55,7 +55,8 @@ __interrupt void Port_2(void){
 		display_chars(LCD_SEG_L1_3_0, "STAR", SEG_ON);
 	}else
 	if (P2IFG == BUTTON_NUM_PIN){
-		display_chars(LCD_SEG_L1_3_0, "MODE", SEG_ON);
+//		display_chars(LCD_SEG_L1_3_0, "MODE", SEG_ON);
+		clear_display();
 	}else
 	if (P2IFG == BUTTON_UP_PIN){
 		display_chars(LCD_SEG_L1_3_0, "  UP", SEG_ON);
