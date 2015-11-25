@@ -2,7 +2,7 @@
 #include "bm.h"
 #include "accel.h"
 
-void init_accel(){
+void accel_start(){
 
 	/* config SPI */
 
@@ -16,37 +16,27 @@ void init_accel(){
 
 	/* config accel */
 
-	PJDIR |= 0x03;	//	PJ.0(power), PJ.1(CSB, Chip select SPI mode)
-	PJOUT &= ~0x03;	//	PJ.0 -> VDDIO, VDD. Power down accelerometer. PJ.1 -> CSB, set to low to prevent floating pin
-
-	P2DIR |= 0x20;	//	P2.5(OP) -> INT1
-	P1DIR |= 0xE0;	//	P1.5(SDO), P1.6(SDX), P1.7(SCK) as OP
-
-	P2OUT &= ~0x20;	//	Set to low to prevent floating pin
-	P1OUT &= ~0xE0;	//	Set to low to prevent floating pin
-
-	/*ACTUAL setting up ... */
+	PJDIR |= 0x03;	//	PJ.0(power), PJ.1(CSB, Chip Select Bit? (Set to enable))
 
 	P2DIR &= ~0x20;	//	P2.5 as input (INT1)
 	P2IES &= ~0x20;	//	P2.5 interrupt, Rising edge
 
-	P1DIR &= ~0x20;	//	P1.5 as input (SDO)
+	P1DIR &= ~0x20;	//	P1.5 as input (from SDO, SPI Data Output)
 	P1REN |= 0x20;	//	P1.5 resistor enable
 	P1OUT &= ~0x20;	//	P1.5 pull down
 	P1SEL |= 0xE0;	//	P1.5, P1.6, P1.7, SPI mode
-	PJOUT |= 0x01;	//	PJ.0 set to 1, power on accelerometer
-	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
 
-	__delay_cycles(10000);//5ms for accelerometer to initialise (change to timer)
+	PJOUT |= 0x01;	//	PJ.0 set to high, power on accelerometer
+	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1 (selects accelerometer), ONLY after powering on (BMA250)
+
+	__delay_cycles(10000);	//5ms for accelerometer to initialise (change to timer)
 
 	/* write accelerometer register configuration */
-
-	accel_start();
 
 	get_set_reg(BMP_GRANGE & ~BIT8, g_range, 1);	// g Range config
 	get_set_reg(BMP_BWD & ~BIT8, bw, 1);			// Bandwidth config
 	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config (power mode)
-//	get_set_reg(BMP_SCR & ~BIT8, shadowing, 1);		// disable shadowing
+	get_set_reg(BMP_SCR & ~BIT8, shadowing, 1);		// disable shadowing (update MSB register and LSB register together)
 
 
 //	get_set_reg(BMP_IMR2 & ~BIT8, 0x01, 1);       	// map 'new data' interrupt to INT1(P2.5) pin
@@ -55,23 +45,8 @@ void init_accel(){
 	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
 	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
 
-	accel_stop();
-
-	return;
-}
-
-void accel_start(){
-
 	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
 	P2IE |= 0x20;	//	enable P2.5 interrupt
-
-	PJOUT |= 0x01;	//	power on accelerometer (PJ.0 -> VDD, VDDIO)
-	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
-
-	__delay_cycles(10000);//5ms for accelerometer to initialise (change to timer)
-
-	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
-	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
 
 	return;
 }
@@ -89,22 +64,42 @@ void accel_stop(){
 
 void accel_get(){
 
+	u8 temp;
+
 	/* read bma250 datasheet pg. 16 */
 
-	xyz[0] = get_set_reg(BMP_ACC_X_LSB, 0, 0);
-	xyz[0] = get_set_reg(BMP_ACC_X_MSB, 0, 0);
+	xyz[0] = get_set_reg(BMP_ACC_X_MSB, 0, 0);	//	needs to read LSB to update MSB register
+	xyz[0] = xyz[0]<< 2;
+	temp = (get_set_reg(BMP_ACC_Y_LSB, 0, 0) & 0xC0) >> 6;
+	xyz[0] |= temp;
 
-	xyz[1] = get_set_reg(BMP_ACC_Y_LSB, 0, 0);
 	xyz[1] = get_set_reg(BMP_ACC_Y_MSB, 0, 0);
+	xyz[1] = xyz[1]<< 2;
+	temp = (get_set_reg(BMP_ACC_Y_LSB, 0, 0) & 0xC0) >> 6;
+	xyz[1] |= temp;
 
-	xyz[2] = get_set_reg(BMP_ACC_Z_LSB, 0, 0);
 	xyz[2] = get_set_reg(BMP_ACC_Z_MSB, 0, 0);
+	xyz[2] = xyz[2]<< 2;
+	temp = (get_set_reg(BMP_ACC_Y_LSB, 0, 0) & 0xC0) >> 6;
+	xyz[2] |= temp;
+
+	for(temp = 0; temp < 3; temp++){	//	if negative
+		if ((xyz[temp] & 0x0200) == 0x0200){
+			xyz[temp] |= 0xFC00;
+			xyz[temp] = (~xyz[temp]) | 0x8000;
+			xyz[temp]++;
+		}
+	}
 
 	return;
 }
 
-int is_neg(u8 data){
-	return (data & 0x80);
+int is_neg(u16 data){
+	return ((data & 0x8000) == 0x8000);
+}
+
+u16 remove_sign(u16 data){
+	return (data & 0x7FFF);
 }
 
 u8 get_set_reg(u8 address, u8 config, int RW){

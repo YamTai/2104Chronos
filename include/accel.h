@@ -36,16 +36,20 @@
 
 // Acceleration measurement range in g
 // Valid ranges are: 2, 4, 8, 16
-#define accel_range       (4u)
+#define accel_range       (16u)
 
 #if (accel_range == 2)
 	static u8 g_range = 0x03;
+	static u16 mgLSB = 4;	// multiplied by 100 to convert from float to int
 #elif (accel_range == 4)
 	static u8 g_range = 0x05;
+	static u16 mgLSB = 8;
 #elif (accel_range == 8)
 	static u8 g_range = 0x08;
+	static u16 mgLSB = 16;
 #elif (accel_range == 16)
 	static u8 g_range = 0x0C;
+	static u16 mgLSB = 31;
 #endif
 
 // Bandwidth for filtered acceleration data in Hz (Sampling rate is twice the bandwidth)
@@ -95,9 +99,10 @@
 
 u16 xyz[3];
 
-void init_accel(void);
+//void init_accel(void);
 void accel_get(void);
 void accel_start(void);
 void accel_stop(void);
 u8 get_set_reg(u8, u8, int);
-int is_neg(u8);
+int is_neg(u16);
+u16 remove_sign(u16);

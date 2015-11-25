@@ -15,13 +15,15 @@
 
 extern u16 xyz[3];
 
+unsigned short temp;
+
 /*
  * main.c
  */
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
 
-    lcd_init();	//	LCD Iint
+    lcd_init();	//	LCD init
 
     /*initialise buttons*/
     P2DIR &= ~0x1F;	//	P2.0 ~ P2.4 as OP
@@ -31,9 +33,6 @@ int main(void) {
     P2IFG &= ~0x1F;	//	P2.0 ~ P2.4 interrupt flag clear
     P2IE |= 0x1F;	//	P2.0 ~ P2.4 interrupt enable
 
-//	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
-//	P2IE |= 0x20;	//	enable P2.5 interrupt
-
     P2SEL |= 0x08;	//	P2.3 alternate function, TA1 CCR2 CCI2A
 
     TA0CTL |= TASSEL_1 | ID_3 | TACLR;	// ACLK (32768Hz) | /8 | timerA clear, 4096Hz (2^16/4096), MAX 16 seconds
@@ -42,8 +41,8 @@ int main(void) {
 	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (?MHz) | Continuous mode | timer A clear
 	TA1CCTL2 |= CM_1 | CCIS_0 | SCS | CAP | CCIE;	//	rising edge | input select CCI2A | Synchronous | Capture mode | Interrupt enable
 
-    init_accel();
 
+	accel_start();
     while(1){
 
         _BIS_SR(LPM3_bits + GIE);	// low power mode to save more powar
@@ -57,19 +56,11 @@ __interrupt void Port_2(void){
 
 	u8 *str;
 
+
+	//	mgLSB are mg values per LSB, mutiplied by 100
+
 	if (P2IFG == BUTTON_STAR_PIN){
 		display_chars(LCD_SEG_L1_3_0, "STAR", SEG_ON);
-		accel_get();
-		str = int_to_array(xyz[0], 5, 2);
-		if (is_neg(xyz[0])){
-			display_symbol(LCD_SYMB_ARROW_UP, SEG_OFF);
-			display_symbol(LCD_SYMB_ARROW_DOWN, SEG_ON);
-
-		}else{
-			display_symbol(LCD_SYMB_ARROW_DOWN, SEG_OFF);
-			display_symbol(LCD_SYMB_ARROW_UP, SEG_ON);
-		}
-		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 	}else
 	if (P2IFG == BUTTON_NUM_PIN){
 		display_chars(LCD_SEG_L1_3_0, "MODE", SEG_ON);
@@ -81,13 +72,25 @@ __interrupt void Port_2(void){
 		display_chars(LCD_SEG_L1_3_0, "  DN", SEG_ON);
 	}else
 	if (P2IFG == BUTTON_BACKLIGHT_PIN){
-
+		display_chars(LCD_SEG_L1_3_0, "  BL", SEG_ON);
 	}else
 	if (P2IFG == Accel_int1){
+
 		accel_get();
-		str = int_to_array(xyz[1], 5, 2);
+
 		display_chars(LCD_SEG_L1_3_0, "HI-G", SEG_ON);
-		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
+
+		temp = remove_sign(xyz[0]) * mgLSB;
+
+		str = int_to_array(temp, 5, 1);
+		display_chars(LCD_SEG_L2_3_0, (u8 *)str, SEG_ON);
+		display_symbol(LCD_SEG_L2_COL0, SEG_ON);
+
+		if (is_neg(xyz[0])){
+			display_char(LCD_SEG_L2_4, (u8)'L', SEG_ON);
+		}else{
+			display_char(LCD_SEG_L2_4, (u8)'R', SEG_ON);
+		}
 	}
 
 	P2IFG &= ~0x1F;	// P2.0 ~ P2.4 interrupt flag clear
@@ -100,7 +103,8 @@ __interrupt void TIMER_A0_CCR0_ISR(void){
 
 	accel_stop();
 
-	display_chars(LCD_SEG_L2_4_0, (u8 *)"000000", SEG_ON);
+	display_chars(LCD_SEG_L2_4_0, (u8 *)"------", SEG_ON);
+	display_symbol(LCD_SEG_L2_COL0, SEG_OFF);
 	TA0CCR0 = 0;
 	TA0CTL |= MC_0 | TACLR;	//	stop TimerA0 in up mode
 	TA0CCTL0 &= ~CCIFG;
