@@ -13,7 +13,11 @@
 
 #define Accel_int1				(BIT5)
 
+void buzz(u8, u16);
+
 extern u16 xyz[3];
+
+u16 buzzer_count;
 
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
@@ -35,12 +39,38 @@ int main(void) {
 	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (?MHz) | Continuous mode | timer A clear
 	TA1CCTL2 |= CM_1 | CCIS_0 | SCS | CAP | CCIE;	//	rising edge | input select CCI2A | Synchronous | Capture mode | Interrupt enable
 
+//	buzz(1, 0xFFFF);
+
     while(1){
 
         _BIS_SR(LPM3_bits + GIE);	// low power mode to save more powar
         __no_operation();
 
 	}
+}
+
+void buzz(u8 tone, u16 interval){
+
+	P2DIR |= 0x80;	//	buzzer output
+
+	TA1CCTL0 |= CM_1 | SCS | CCIE;	//	rising edge | Synchronous | Interrupt enable
+	TA1CCTL1 |= CM_1 | SCS | CCIE;	//	rising edge | Synchronous | Interrupt enable
+
+	buzzer_count = interval;	//	duration of buzz
+	tone = tone * 12;			//	tone of buzz
+
+	P2DIR |= 0x80;	//	P2.7 (buzzer) output
+
+	TA1CTL &= ~0x30;	//	stop TimerA1
+	TA1CTL |= ID_3 | TACLR;	//	/8 | timer A clear
+
+	TA1CCTL1 |= CCIE;	//	Interrupt enable
+
+	TA1CCR1 = tone;		//	up time for PWM
+	TA1CCR0 = tone*2;	//	2 times tone, 50% PWM
+
+	TA1CTL |= MC_1;	//	start timer in up mode
+
 }
 
 #pragma vector = PORT2_VECTOR
@@ -70,6 +100,8 @@ __interrupt void Port_2(void){
 	if (P2IFG == Accel_int1){
 
 		accel_get();
+
+		accel_stop();
 
 		display_chars(LCD_SEG_L1_3_0, "HI-G", SEG_ON);
 
@@ -111,6 +143,7 @@ __interrupt void TIMER_A5_CCR0_ISR(void){
 
 	TA0CTL |= TACLR;	//	clear TimerA0
 	TA0CTL &= ~0x30;	//	stop TimerA0
+
 }
 
 
@@ -127,8 +160,28 @@ __interrupt void TIMER_A5_CCR1_ISR(void){
 	}
 }
 
+
+#pragma vector=TIMER1_A0_VECTOR
+__interrupt void TIMER_A3_CCR0_ISR(void){
+
+	P2OUT |= 0x80;
+
+	buzzer_count--;
+
+	if (buzzer_count == 0){
+
+		TA1CCR0 = 0;		//	reset CCR0
+		TA1CCR1 = 0;		//	reset CCR1
+		TA1CCTL0 &= ~CCIE;	//	Disable interrupt
+		TA1CCTL1 &= ~CCIE;	//	Disable interrupt
+		P2DIR &= ~0x80;		//	buzzer output
+	}
+
+	TA1CTL |= TASSEL_2 | MC_2 | TACLR;	//	SMCLK (?MHz) | Continuous mode | timer A clear, re-initialise TimerA1
+}
+
 #pragma vector=TIMER1_A1_VECTOR
-__interrupt void TIMER_A3_CCR2_ISR(void){
+__interrupt void TIMER_A3_CCR1_CCR2_ISR(void){
 
 	u8 *str;
 	u16 rand;
@@ -160,4 +213,14 @@ __interrupt void TIMER_A3_CCR2_ISR(void){
 		TA0CCR1 = rand;				//	set TA0CCR1 to 'random' value
 		TA0CTL |= MC_1;				//	start TimerA0 in up mode
 	}
+	else
+	if ((TA1CCTL1 & CCIFG) == 1){	//	toggle P2.7 output (buzzer)
+
+		P2OUT &= ~0x80;
+
+		TA1CCTL1 &= ~CCIFG;	//	clear interrupt flag
+	}
+
 }
+
+
