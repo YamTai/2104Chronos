@@ -2,7 +2,7 @@
 #include "bm.h"
 #include "accel.h"
 
-void accel_start(){
+void accel_init(){
 
 	/* config SPI */
 
@@ -29,24 +29,46 @@ void accel_start(){
 	PJOUT |= 0x01;	//	PJ.0 set to high, power on accelerometer
 	PJOUT |= 0x02;	//	PJ.1(CSB) set to 1 (selects accelerometer), ONLY after powering on (BMA250)
 
-	__delay_cycles(10000);	//5ms for accelerometer to initialise (change to timer)
+	__delay_cycles(10000);	//5ms for accelerometer to initialise
 
 	/* write accelerometer register configuration */
 
 	get_set_reg(BMP_GRANGE & ~BIT8, g_range, 1);	// g Range config
 	get_set_reg(BMP_BWD & ~BIT8, bw, 1);			// Bandwidth config
-	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config (power mode)
+//	get_set_reg(BMP_PM & ~BIT8, sleep, 1);			// sleep phase config (power mode)
 	get_set_reg(BMP_SCR & ~BIT8, shadowing, 1);		// disable shadowing (update MSB register and LSB register together)
 
 
 //	get_set_reg(BMP_IMR2 & ~BIT8, 0x01, 1);       	// map 'new data' interrupt to INT1(P2.5) pin
 //	get_set_reg(BMP_ISR2 & ~BIT8, 0x10, 1);       	// enable 'new data' interrupt
-	get_set_reg(HIGH_G_THRESHOLD & ~BIT8, 0xF0, 1);	//	high-g mode threshold, 0xC0 default
+//	get_set_reg(HIGH_G_THRESHOLD & ~BIT8, 0xF0, 1);	//	high-g mode threshold, 0xC0 default
 	get_set_reg(BMP_IMR1 & ~BIT8, 0x02, 1);       	// map 'high-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
 	get_set_reg(BMP_ISR2 & ~BIT8, 0x01 ,1);			// enable x high-g interrupt (bma250 datasheet, pg. 43)
+//	get_set_reg(BMP_ISR2 & ~BIT8, 0x02 ,1);			// enable y high-g interrupt (bma250 datasheet, pg. 43)
+//	get_set_reg(BMP_ISR2 & ~BIT8, 0x04 ,1);			// enable z high-g interrupt (bma250 datasheet, pg. 43)
+//	get_set_reg(HIGH_G_HYSTERESIS & ~BIT8, 0xC0, 1);	//	high-g hysteresis, default 0x80
+
+
+//	get_set_reg(BMP_IMR1 & ~BIT8, 0x01, 1);       	// map 'low-g' interrupt to INT1(P2.5) pin (bma250 datasheet, pg. 43)
+//	get_set_reg(BMP_ISR2 & ~BIT8, 0x08, 1);			// enable low-g interrupt (bma250 datasheet, pg. 43)
+//	get_set_reg(LOW_G_DELAY & ~BIT8, 0x00, 1);		// low-g delay (2ms)
+//	get_set_reg(LOW_G_THRESHOLD & ~BIT8, 0x30, 1);	// low-g threshold, default 0x30
 
 	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
 	P2IE |= 0x20;	//	enable P2.5 interrupt
+
+	get_set_reg(BMP_PM & ~BIT8, (suspend), 1);// suspend mode (BMA250 datasheet pg. 14, 41)
+
+	return;
+}
+
+
+void accel_start(){
+
+	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
+	P2IE |= 0x20;	//	enable P2.5 interrupt
+
+	get_set_reg(BMP_PM & ~BIT8, 0x00, 1);			// normal mode (BMA250 datasheet pg. 14, 41)
 
 	return;
 }
@@ -56,8 +78,7 @@ void accel_stop(){
 	P2IFG &= ~0x20;	//	reset P2.5 interrupt flag
 	P2IE &= ~0x20;	//	disable P2.5 interrupt
 
-	PJOUT &= ~0x02;	//	PJ.1(CSB) set to 1, ONLY after powering on (BMA250)
-	PJOUT &= ~0x01;	//	power down accelerometer (PJ.0 -> VDD, VDDIO)
+	get_set_reg(BMP_PM & ~BIT8, (suspend), 1);// suspend mode (BMA250 datasheet pg. 14, 41)
 
 	return;
 }

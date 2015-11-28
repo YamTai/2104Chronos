@@ -20,6 +20,9 @@
 #define BMP_IMR2             (0x1A)	   // Interrupt mapping register 2
 #define BMP_IMR3             (0x1B)	   // Interrupt mapping register 3
 
+#define HIGH_G_HYSTERESIS	(0x24)	//	Hysteresis for high-g (with some low-g stuff) (bma250 datasheet, pg. 46)
+#define LOW_G_DELAY			(0x22)	//	delay for low-g interrupt
+#define LOW_G_THRESHOLD		(0x23)	// threshold for low g interrupt (bma250 datasheet, pg. 46)
 #define HIGH_G_THRESHOLD	(0x26)	// threshold for high g interrupt (bma250 datasheet, pg. 46)
 
 #define shadowing			(BIT6)	// for BMP_SCR, shadowing (reading LSB updates MSB, set to disable)
@@ -34,9 +37,11 @@
 #define AS_SPI_BR0           (UCA0BR0)		//	USCI A0 Baud Rate 0 (low byte)
 #define AS_SPI_BR1           (UCA0BR1)		//	USCI A0 Baud Rate 1 (high byte)
 
+#define suspend				(0x80)			//bit7 for 0x11 (power mode)(BMA250 datasheet, page 41)
+
 // Acceleration measurement range in g
 // Valid ranges are: 2, 4, 8, 16
-#define accel_range       (8u)
+#define accel_range       (2u)
 
 #if (accel_range == 2)
 	static u8 g_range = 0x03;
@@ -54,7 +59,7 @@
 
 // Bandwidth for filtered acceleration data in Hz (Sampling rate is twice the bandwidth)
 // Valid bandwidths are: 8, 16, 31, 63, 125, 250, 500, 1000
-#define bandwidth   (63u)
+#define bandwidth   (1000u)
 
 #if (bandwidth == 8)
 	static u8 bw = 0x08;
@@ -99,7 +104,7 @@
 
 u16 xyz[3];
 
-//void init_accel(void);
+void accel_init(void);
 void accel_get(void);
 void accel_start(void);
 void accel_stop(void);
