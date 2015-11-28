@@ -83,7 +83,6 @@ __interrupt void Port_2(void){
 	if (P2IFG == BUTTON_STAR_PIN){
 		display_chars(LCD_SEG_L1_3_0, "READ", SEG_ON);
 		buzz(1, 0x01FF);
-
 		accel_get();
 		temp = remove_sign(xyz[0]) * mgLSB;
 
@@ -223,7 +222,8 @@ __interrupt void TIMER_A3_CCR1_CCR2_ISR(void){
 			rand |= 0x3000;
 		}
 
-		str = int_to_array((rand/4096), 5, 0);	//	approximate delay
+//		str = int_to_array((rand/4096), 5, 0);	//	approximate delay (seconds)
+		str = int_to_array((rand/4096), 5, 0);	//	approximate delay (cycles)
 		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 		clear_line(1);
 		display_symbol(LCD_SEG_L2_COL0, SEG_OFF);
