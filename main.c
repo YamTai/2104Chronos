@@ -223,7 +223,7 @@ __interrupt void TIMER_A3_CCR1_CCR2_ISR(void){
 		}
 
 //		str = int_to_array((rand/4096), 5, 0);	//	approximate delay (seconds)
-		str = int_to_array((rand/4096), 5, 0);	//	approximate delay (cycles)
+		str = int_to_array(rand, 5, 0);	//	approximate delay (cycles)
 		display_chars(LCD_SEG_L2_4_0, (u8 *)str, SEG_ON);
 		clear_line(1);
 		display_symbol(LCD_SEG_L2_COL0, SEG_OFF);
